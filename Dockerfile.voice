@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "voice_ai.py"]
+CMD ["python", "k10_live_room.py"]
