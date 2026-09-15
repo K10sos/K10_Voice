@@ -12,7 +12,13 @@ from scipy.signal import resample_poly
 import discord
 from discord.ext import commands, voice_recv
 from openai import AsyncOpenAI
-
+# Load Opus for Discord Voice
+if not discord.opus.is_loaded():
+    try:
+        discord.opus.load_opus("libopus.so.0")
+        print("✅ OPUS LOADED", flush=True)
+    except Exception as e:
+        print("❌ OPUS LOAD ERROR:", type(e).__name__, e, flush=True)
 
 # ============================================================
 # K10 LIVE ROOM
