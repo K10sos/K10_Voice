@@ -21,7 +21,7 @@ from openai import AsyncOpenAI
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-MODEL = "gpt-live-1"
+MODEL = "gpt-realtime"
 
 # جرّب هالصوت أول
 VOICE = "gleam"
