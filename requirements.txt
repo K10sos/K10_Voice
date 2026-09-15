@@ -1,1 +1,2 @@
 discord.py[voice]>=2.2.0
+numpy
