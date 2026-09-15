@@ -1,4 +1,5 @@
 discord.py[voice]>=2.6.0
+discord-ext-voice-recv
 openai
 numpy
 scipy
