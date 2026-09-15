@@ -1460,14 +1460,14 @@ async def join(
         # OPENAI LIVE
         # =====================================
 
-       session.main_task = asyncio.create_task(
-    session.run()
-)
+        session.main_task = asyncio.create_task(
+        session.run()
+    )
 
-await asyncio.wait_for(
-    session.ready.wait(),
-    timeout=25
-)
+        await asyncio.wait_for(
+        session.ready.wait(),
+        timeout=25
+    )
         if not (
             session.started
             .is_set()
