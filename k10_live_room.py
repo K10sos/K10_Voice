@@ -1460,10 +1460,18 @@ async def join(
         # OPENAI LIVE
         # =====================================
 
-        session.main_task = (
-            asyncio.create_task(
-                session.run()
-            )
+        async def run_gpt_live_debug():
+    try:
+        print("🚀 DEBUG: session.run() starting...", flush=True)
+        await session.run()
+        print("⚠️ DEBUG: session.run() ended", flush=True)
+    except Exception as e:
+        print("❌ GPT-LIVE REAL ERROR:", repr(e), flush=True)
+        logging.exception("GPT-Live session.run() crashed")
+
+session.main_task = asyncio.create_task(
+    run_gpt_live_debug()
+)
         )
 
 
