@@ -1,0 +1,6 @@
+discord.py
+discord-ext-voice-recv
+openai
+numpy
+scipy
+PyNaCl
