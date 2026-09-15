@@ -1472,7 +1472,7 @@ async def join(
 session.main_task = asyncio.create_task(
     run_gpt_live_debug()
 )
-        )
+    
 
 
         await asyncio.wait_for(
