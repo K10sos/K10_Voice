@@ -13,4 +13,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "k10_live_room.py"]
+CMD ["python", "-u", "k10_live_room.py"]
