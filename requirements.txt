@@ -1,6 +1,1 @@
-discord.py
-discord-ext-voice-recv
-openai
-numpy
-scipy
-PyNaCl
+discord.py[voice]>=2.2.0
