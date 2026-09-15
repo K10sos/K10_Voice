@@ -1,5 +1,6 @@
 discord.py[voice]>=2.7.0
 git+https://github.com/jstewart0788/discord-ext-voice-recv-dave.git
+davey>=0.1.4
 openai[realtime]
 numpy
 scipy
