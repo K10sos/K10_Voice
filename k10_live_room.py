@@ -21,135 +21,88 @@ from openai import AsyncOpenAI
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# OpenAI Realtime
 MODEL = "gpt-realtime"
 
-# جرّب هالصوت أول
-VOICE = "gleam"
+# نخليه صوت مدعوم
+VOICE = "coral"
 
 # تجاهل الأصوات الضعيفة جدًا
 INPUT_GATE = 240
 
-# بعد ما الشخص يسكت بهالمدة، نسمح لشخص ثاني
+# بعد هالمدة نعتبر المتكلم وقف
 SPEAKER_TIMEOUT = 1.4
 
-# 20ms PCM16 @ 24k mono
+# 20ms PCM16 / 24kHz / mono
 LIVE_FRAME_BYTES = 960
 
 
 # ============================================================
-# PERSONALITY
+# K10 PERSONALITY
 # ============================================================
 
 SYSTEM_PROMPT = """
-أنتِ K10 AI، شخصية صوتية افتراضية أنثوية داخل روم Discord.
+اسمج K10 AI.
 
-اللغة واللهجة:
-- تكلمي بالعربية فقط.
-- لهجتك الأساسية بحرينية طبيعية.
-- دخلي مصطلحات قطرية بشكل طبيعي حسب الشخص والسياق.
-- إذا الشخص يتكلم بحريني، ميلي أكثر للبحريني.
-- إذا الشخص يتكلم قطري، ميلي أكثر للقطري.
-- لا تتحولين للفصحى إلا إذا احتجتي.
-- لا تتحولين للهجة سعودية أو كويتية بشكل واضح.
-- أسماء الألعاب والبرامج ممكن تنطقينها بالإنجليزية.
+أنتي بنت خليجية، وطريقة كلامج بحرينية وقطرية.
+تكلمين بشكل طبيعي جدًا، كأنج قاعدة معاهم في روم ديسكورد،
+مو بطريقة روبوت ولا بطريقة رسمية.
 
-طريقة الصوت:
-- تكلمي بنبرة أنثوية شابة وخفيفة.
-- خلي الصوت طبيعي وعفوي.
-- لا تتكلمي مثل روبوت.
-- لا تتكلمي مثل مذيعة أو خدمة عملاء.
-- استخدمي نبرة استغراب وضحك ومزح بشكل طبيعي.
-- تكلمي بسرعة طبيعية.
-- ردودك قصيرة غالبًا، جملة أو جملتين.
-- لا تعيدي كلام الشخص قبل الرد.
-- لا تشرحين وايد إلا إذا طلب منج.
+لهجتج الأساسية بحرينية، وتدخلين كلمات ومصطلحات قطرية
+بشكل طبيعي حسب الشخص اللي يكلمج.
 
-أسلوب بحريني طبيعي:
-ممكن تستخدمين حسب السياق:
-"شلونك"
-"شخبارك"
-"شنو"
-"جذي"
-"واجد"
-"عيل"
-"مو"
-"إي"
-"زين"
-"جان"
-"الحين"
-"من صجك؟"
-"عيل شتبي؟"
-"وش فيك؟"
-"لا عاد"
-"ايي علييك"
-"بااابااااا"
-"ماااامااا"
-ومصطلحات قطرية تقدرين تستخدمينها:
-"علومك؟"
-"شحالك؟"
-"وش السالفة؟"
-"وش عندك؟"
-"وش بلاك؟"
-"يا ريال"
-"سم"
-"أبشر"
-"ما عليك زود"
-"وش ذا؟"
-"زين عاد"
-"هيه"
-"إي والله"
-"بسك عاد"
-"عطني الزبدة"
-"وش هالخرابيط؟"
-"وش تبي الحين؟"
+استخدمي كلمات خليجية طبيعية مثل:
+شلون، شفيك، شالسالفة، الحين، زين، إي، عاد، عيل،
+مب، وايد، هني، من صجك، اشدعوه، ويش، شنو.
 
-لا تحشرين المصطلحات حشر.
-خلي الكلام يطلع طبيعي وكأنج متعودة على البحريني والقطري.
+لا تحشرين الكلمات غصب.
+خلي اللهجة تطلع طبيعية.
 
-الشخصية:
-- مرحة.
-- جريئة.
-- سريعة بديهة.
-- ساخرة.
-- وقحة بشكل كوميدي خفيف.
-- لسانج طويل شوي بالمزح.
-- مو لازم توافقين الشخص على كل شيء.
-- إذا قال كلام غريب عادي تردين عليه برد ساخر خفيف.
+أسلوبج:
+- ردود قصيرة وسريعة غالبًا.
+- عفوية.
+- خفيفة دم.
+- تفهمين الطقطقة والمزح.
+- تقدرين تطقطقين طقطقة خفيفة بدون تجريح قوي.
+- لا تتكلمين بطريقة رسمية إلا إذا السؤال يحتاج.
+- لا تكررين نفس الكلام.
+- لا تعطين مقدمات طويلة.
+- جاوبي على السؤال مباشرة.
+- لا تقولين كل شوي إنج ذكاء اصطناعي.
+- اسمج K10 AI.
 
-ممكن تستخدمين أحيانًا:
-"يا زفت"
-"يا غبي"
-"يا حمار"
-"انقلع"
-"أنت صاحي؟"
-"شنو قاعد تقول؟"
-"من صجك انت؟"
-"يا ريال بسك"
-"وش هالخرابيط؟"
-"عيل شتبي الحين؟"
-"الله يعينني عليك"
-"كل زق"
-"يااا الثووور"
-"يا الاسود"
-"ياااا مكوهه"
-لكن:
-- لا تكونين عدوانية.
-- لا تهينين شكل أو جسم أحد.
-- لا تهددين.
-- لا تترددين.
-- لا تستخدمين غزل أو رومانسية.
+إذا أحد كلمج بحريني:
+ردي عليه بحريني طبيعي.
 
-أنتِ داخل روم Discord فيه أكثر من شخص.
-اسمعي الشخص اللي يتكلم وردي عليه طبيعي.
-تجاهلي الكحة والضوضاء والأصوات القصيرة غير المفهومة.
+إذا أحد كلمج قطري:
+ردي عليه قطري طبيعي.
 
-إذا ما فهمتي الكلام قولي:
-"شنو قلت؟ عيدها شوي."
+إذا خلط اللهجتين:
+عادي تخلطين بحريني وقطري.
+
+إذا ما سمعتي الكلام عدل، قولي مثلاً:
+"ها؟ عيدها شوي ما سمعتك عدل"
 أو:
-"وش قلت حبيبي؟ ما سمعتك."
+"شنو قلت؟ الصوت تقطع عندي"
 
-أنتِ K10 AI ولا تدعين إنج إنسانة حقيقية.
+إذا أحد يطقطق:
+عادي ردي عليه بطقطقة خفيفة وبنفس جو الروم.
+
+خلي نبرة الكلام حيوية وطبيعية وسريعة،
+ولا تطولين في الرد إلا إذا السؤال يحتاج شرح.
 """
+
+
+# ============================================================
+# LOGGING
+# ============================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logger = logging.getLogger("K10_Voice")
 
 
 # ============================================================
@@ -157,27 +110,10 @@ SYSTEM_PROMPT = """
 # ============================================================
 
 if not DISCORD_TOKEN:
-    raise RuntimeError("❌ DISCORD_TOKEN مو موجود")
+    raise RuntimeError("DISCORD_TOKEN مو موجود")
 
 if not OPENAI_API_KEY:
-    raise RuntimeError("❌ OPENAI_API_KEY مو موجود")
-
-
-# ============================================================
-# QUIET VOICE_RECV LOGS
-# ============================================================
-
-logging.getLogger(
-    "discord.ext.voice_recv.reader"
-).setLevel(logging.ERROR)
-
-logging.getLogger(
-    "discord.ext.voice_recv.rtp"
-).setLevel(logging.ERROR)
-
-logging.getLogger(
-    "discord.ext.voice_recv.gateway"
-).setLevel(logging.ERROR)
+    raise RuntimeError("OPENAI_API_KEY مو موجود")
 
 
 # ============================================================
@@ -194,14 +130,8 @@ openai_client = AsyncOpenAI(
 # ============================================================
 
 intents = discord.Intents.default()
-
-# نحتاجه لأننا نستخدم !!join
 intents.message_content = True
-
 intents.voice_states = True
-
-# مهم:
-# لا تحط intents.members = True
 
 bot = commands.Bot(
     command_prefix="!!",
@@ -213,944 +143,616 @@ SESSIONS = {}
 
 
 # ============================================================
-# DISCORD 48K STEREO -> LIVE 24K MONO
+# AUDIO HELPERS
+# Discord:
+# 48kHz / stereo / PCM16
+#
+# OpenAI:
+# 24kHz / mono / PCM16
 # ============================================================
 
 def discord_to_live(pcm: bytes) -> bytes:
+    """
+    Discord 48k stereo PCM16
+    ->
+    OpenAI 24k mono PCM16
+    """
 
     if not pcm:
         return b""
 
-    samples = np.frombuffer(
-        pcm,
-        dtype=np.int16
-    )
-
-    if len(samples) < 4:
-        return b""
-
-    # Stereo pairs
-    if len(samples) % 2:
-        samples = samples[:-1]
-
-    stereo = samples.reshape(
-        -1,
-        2
-    )
-
-    # Stereo -> mono
-    mono = (
-        stereo[:, 0].astype(np.float32)
-        +
-        stereo[:, 1].astype(np.float32)
-    ) / 2.0
-
-    # 48k -> 24k
-    mono24 = resample_poly(
-        mono,
-        1,
-        2
-    )
-
-    mono24 = np.clip(
-        mono24,
-        -32768,
-        32767
-    ).astype(np.int16)
-
-    return mono24.tobytes()
-
-
-# ============================================================
-# LEVEL
-# ============================================================
-
-def audio_level(pcm: bytes) -> float:
-
-    if not pcm:
-        return 0.0
-
-    samples = np.frombuffer(
-        pcm,
-        dtype=np.int16
-    )
-
-    if len(samples) == 0:
-        return 0.0
-
-    f = samples.astype(
-        np.float32
-    )
-
-    return float(
-        np.sqrt(
-            np.mean(f * f)
+    try:
+        audio = np.frombuffer(
+            pcm,
+            dtype=np.int16
         )
-    )
 
+        if len(audio) < 2:
+            return b""
 
-# ============================================================
-# LIVE 24K MONO -> DISCORD 48K STEREO
-# ============================================================
+        # Stereo -> Mono
+        audio = audio[:len(audio) - (len(audio) % 2)]
+        stereo = audio.reshape(-1, 2)
 
-def live_to_discord(pcm24: bytes) -> bytes:
+        mono = stereo.astype(
+            np.int32
+        ).mean(axis=1)
 
-    if not pcm24:
+        mono = np.clip(
+            mono,
+            -32768,
+            32767
+        ).astype(np.int16)
+
+        # 48k -> 24k
+        mono_24k = resample_poly(
+            mono,
+            1,
+            2
+        )
+
+        mono_24k = np.clip(
+            mono_24k,
+            -32768,
+            32767
+        ).astype(np.int16)
+
+        return mono_24k.tobytes()
+
+    except Exception as e:
+        print(
+            "❌ discord_to_live:",
+            type(e).__name__,
+            e,
+            flush=True
+        )
+
         return b""
 
-    mono = np.frombuffer(
-        pcm24,
-        dtype=np.int16
-    )
 
-    if len(mono) == 0:
+def live_to_discord(pcm: bytes) -> bytes:
+    """
+    OpenAI 24k mono PCM16
+    ->
+    Discord 48k stereo PCM16
+    """
+
+    if not pcm:
         return b""
 
-    # 24k -> 48k
-    mono48 = resample_poly(
-        mono.astype(np.float32),
-        2,
-        1
-    )
+    try:
+        audio = np.frombuffer(
+            pcm,
+            dtype=np.int16
+        )
 
-    mono48 = np.clip(
-        mono48,
-        -32768,
-        32767
-    ).astype(np.int16)
+        if len(audio) == 0:
+            return b""
 
-    # Mono -> stereo
-    stereo = np.empty(
-        len(mono48) * 2,
-        dtype=np.int16
-    )
+        # 24k -> 48k
+        audio_48k = resample_poly(
+            audio,
+            2,
+            1
+        )
 
-    stereo[0::2] = mono48
-    stereo[1::2] = mono48
+        audio_48k = np.clip(
+            audio_48k,
+            -32768,
+            32767
+        ).astype(np.int16)
 
-    return stereo.tobytes()
+        # Mono -> Stereo
+        stereo = np.column_stack(
+            (audio_48k, audio_48k)
+        ).reshape(-1)
+
+        return stereo.astype(
+            np.int16
+        ).tobytes()
+
+    except Exception as e:
+        print(
+            "❌ live_to_discord:",
+            type(e).__name__,
+            e,
+            flush=True
+        )
+
+        return b""
 
 
 # ============================================================
-# DISCORD OUTPUT
+# DISCORD AUDIO SOURCE
 # ============================================================
 
-class K10AudioSource(
-    discord.AudioSource
-):
+class K10AudioSource(discord.AudioSource):
 
-    # 20ms Discord PCM
     FRAME_SIZE = 3840
 
-    # 12 * 20ms = 240ms
-    # يعطي صوت ثابت أكثر
-    PREBUFFER = 12
-
-
     def __init__(self):
-
-        self.frames = queue.Queue()
-
-        self.pending = bytearray()
-
+        self.buffer = bytearray()
         self.lock = threading.Lock()
 
+        # نخزن شوية صوت قبل التشغيل
+        self.prebuffer_frames = 12
         self.started = False
 
-        self.closed = False
+    def put(self, data: bytes):
 
-        self.empty_count = 0
+        if not data:
+            return
 
+        with self.lock:
+            self.buffer.extend(data)
+
+    def read(self):
+
+        with self.lock:
+
+            if not self.started:
+
+                needed = (
+                    self.FRAME_SIZE *
+                    self.prebuffer_frames
+                )
+
+                if len(self.buffer) < needed:
+                    return b"\x00" * self.FRAME_SIZE
+
+                self.started = True
+
+            if len(self.buffer) >= self.FRAME_SIZE:
+
+                frame = bytes(
+                    self.buffer[:self.FRAME_SIZE]
+                )
+
+                del self.buffer[:self.FRAME_SIZE]
+
+                return frame
+
+        return b"\x00" * self.FRAME_SIZE
 
     def is_opus(self):
         return False
 
-
-    def feed(
-        self,
-        pcm24: bytes
-    ):
-
-        if self.closed:
-            return
-
-        converted = live_to_discord(
-            pcm24
-        )
-
-        if not converted:
-            return
-
-        with self.lock:
-
-            self.pending.extend(
-                converted
-            )
-
-            while (
-                len(self.pending)
-                >=
-                self.FRAME_SIZE
-            ):
-
-                frame = bytes(
-                    self.pending[
-                        :self.FRAME_SIZE
-                    ]
-                )
-
-                del self.pending[
-                    :self.FRAME_SIZE
-                ]
-
-                self.frames.put(
-                    frame
-                )
-
-
-    def read(self):
-
-        if self.closed:
-            return b""
-
-        # ------------------------------------
-        # PREBUFFER
-        # ------------------------------------
-
-        if not self.started:
-
-            if (
-                self.frames.qsize()
-                >=
-                self.PREBUFFER
-            ):
-
-                self.started = True
-
-                self.empty_count = 0
-
-                print(
-                    "👩🔊 K10 بدأت تتكلم"
-                )
-
-            else:
-
-                return (
-                    b"\x00"
-                    *
-                    self.FRAME_SIZE
-                )
-
-
-        # ------------------------------------
-        # PLAY
-        # ------------------------------------
-
-        try:
-
-            frame = (
-                self.frames
-                .get_nowait()
-            )
-
-            self.empty_count = 0
-
-            return frame
-
-
-        except queue.Empty:
-
-            self.empty_count += 1
-
-            # إذا خلص الرد
-            if self.empty_count >= 5:
-
-                self.started = False
-                self.empty_count = 0
-
-                print(
-                    "✅ K10 خلصت كلام"
-                )
-
-            return (
-                b"\x00"
-                *
-                self.FRAME_SIZE
-            )
-
-
-    def clear(self):
-
-        with self.lock:
-
-            self.pending.clear()
-
-            self.started = False
-
-            self.empty_count = 0
-
-            try:
-
-                while True:
-                    self.frames.get_nowait()
-
-            except queue.Empty:
-                pass
-
-
     def cleanup(self):
-
-        self.closed = True
-
-        self.clear()
+        pass
 
 
 # ============================================================
-# K10 LIVE SESSION
+# K10 SESSION
 # ============================================================
 
 class K10Session:
 
-    def __init__(
-        self,
-        vc
-    ):
+    def __init__(self, guild_id, vc):
 
+        self.guild_id = guild_id
         self.vc = vc
-
-        self.loop = (
-            asyncio.get_running_loop()
-        )
 
         self.connection = None
 
         self.main_task = None
-
         self.sender_task = None
 
         self.ready = asyncio.Event()
-
         self.started = asyncio.Event()
 
-        self.closed = False
+        self.start_error = None
 
-
-        # ======================================
-        # AUDIO INPUT
-        # ======================================
-
-        self.input_queue = asyncio.Queue(
-            maxsize=1000
-        )
-
-        self.active_user_id = None
-
-        self.active_user_name = None
-
-        self.last_voice_time = 0.0
-
-
-        # ======================================
-        # OUTPUT
-        # ======================================
+        self.input_queue = asyncio.Queue()
 
         self.output = K10AudioSource()
 
-        self.user_text = ""
+        self.closed = False
 
-        self.k10_text = ""
+        self.active_speaker = None
+        self.last_speaker_time = 0
 
-
-    # ========================================================
-    # SPEAKER RESET
-    # ========================================================
-
-    def reset_speaker(self):
-
-        self.active_user_id = None
-
-        self.active_user_name = None
-
-        self.last_voice_time = 0.0
+        self.audio_buffer = bytearray()
 
 
     # ========================================================
     # RECEIVE DISCORD AUDIO
     # ========================================================
 
-    def receive_audio(
+    def push_discord_audio(
         self,
-        user,
+        user_id,
         pcm
     ):
 
         if self.closed:
             return
 
-        if user is None:
+        if not pcm:
             return
 
-        # طنش البوتات
-        if getattr(
-            user,
-            "bot",
-            False
-        ):
-            return
+        now = time.time()
 
+        try:
 
-        audio24 = discord_to_live(
-            pcm
-        )
+            audio = np.frombuffer(
+                pcm,
+                dtype=np.int16
+            )
 
-        if not audio24:
-            return
+            if len(audio) == 0:
+                return
 
-
-        level = audio_level(
-            audio24
-        )
-
-        now = time.monotonic()
-
-
-        # ------------------------------------
-        # السماح لمتكلم جديد
-        # ------------------------------------
-
-        if (
-            self.active_user_id
-            is not None
-            and
-            now - self.last_voice_time
-            >
-            SPEAKER_TIMEOUT
-        ):
-
-            self.reset_speaker()
-
-
-        # ------------------------------------
-        # اختيار المتكلم
-        # ------------------------------------
-
-        if self.active_user_id is None:
+            level = float(
+                np.abs(
+                    audio.astype(np.int32)
+                ).mean()
+            )
 
             if level < INPUT_GATE:
                 return
 
-            self.active_user_id = (
-                user.id
-            )
-
-            self.active_user_name = (
-                getattr(
-                    user,
-                    "display_name",
-                    getattr(
-                        user,
-                        "name",
-                        "Unknown"
-                    )
-                )
-            )
-
-            print()
-            print(
-                "🎙️ المتكلم:",
-                self.active_user_name
-            )
-
-
-        # لا نخلط شخصين
-        if (
-            user.id
-            !=
-            self.active_user_id
-        ):
+        except Exception:
             return
 
+        # نخلي شخص واحد يتكلم في نفس الوقت
+        if self.active_speaker is None:
+            self.active_speaker = user_id
 
-        if level >= INPUT_GATE:
+        elif self.active_speaker != user_id:
 
-            self.last_voice_time = now
+            if (
+                now -
+                self.last_speaker_time
+                >
+                SPEAKER_TIMEOUT
+            ):
+                self.active_speaker = user_id
 
+            else:
+                return
 
-        self.loop.call_soon_threadsafe(
-            self.queue_audio,
-            audio24
-        )
+        self.last_speaker_time = now
 
+        converted = discord_to_live(pcm)
 
-    # ========================================================
-    # QUEUE
-    # ========================================================
-
-    def queue_audio(
-        self,
-        pcm
-    ):
-
-        if self.closed:
+        if not converted:
             return
-
-        if self.input_queue.full():
-
-            try:
-
-                self.input_queue.get_nowait()
-
-            except asyncio.QueueEmpty:
-                pass
-
 
         try:
 
-            self.input_queue.put_nowait(
-                pcm
+            loop = bot.loop
+
+            loop.call_soon_threadsafe(
+                self.input_queue.put_nowait,
+                converted
             )
 
-        except asyncio.QueueFull:
-            pass
+        except Exception as e:
+
+            print(
+                "❌ QUEUE ERROR:",
+                type(e).__name__,
+                e,
+                flush=True
+            )
 
 
     # ========================================================
-    # SEND AUDIO CONTINUOUSLY
-    #
-    # نرسل frame كل 20ms
-    # حتى إذا محد يتكلم نرسل silence
+    # SEND AUDIO TO OPENAI
     # ========================================================
 
     async def send_audio(self):
 
         await self.started.wait()
 
+        print(
+            "🎤 Audio sender started",
+            flush=True
+        )
+
         pending = bytearray()
-
-        event_loop = (
-            asyncio.get_running_loop()
-        )
-
-        next_tick = (
-            event_loop.time()
-        )
-
 
         while not self.closed:
 
             try:
 
-                # --------------------------------
-                # Drain queued Discord audio
-                # --------------------------------
+                chunk = await self.input_queue.get()
 
-                while True:
+                if not chunk:
+                    continue
 
-                    try:
+                pending.extend(chunk)
 
-                        chunk = (
-                            self.input_queue
-                            .get_nowait()
-                        )
-
-                        pending.extend(
-                            chunk
-                        )
-
-                    except asyncio.QueueEmpty:
-
-                        break
-
-
-                # --------------------------------
-                # Exactly 20ms
-                # --------------------------------
-
-                if (
+                while (
                     len(pending)
                     >=
                     LIVE_FRAME_BYTES
                 ):
 
                     frame = bytes(
-                        pending[
-                            :LIVE_FRAME_BYTES
-                        ]
+                        pending[:LIVE_FRAME_BYTES]
                     )
 
-                    del pending[
-                        :LIVE_FRAME_BYTES
-                    ]
+                    del pending[:LIVE_FRAME_BYTES]
 
-                else:
+                    if self.connection is None:
+                        continue
 
-                    # partial audio + silence
-                    frame = bytes(
-                        pending
-                    )
+                    encoded = base64.b64encode(
+                        frame
+                    ).decode("utf-8")
 
-                    pending.clear()
-
-                    frame += (
-                        b"\x00"
-                        *
-                        (
-                            LIVE_FRAME_BYTES
-                            -
-                            len(frame)
+                    await (
+                        self.connection
+                        .input_audio_buffer
+                        .append(
+                            audio=encoded
                         )
                     )
 
-
-                encoded = (
-                    base64.b64encode(
-                        frame
-                    )
-                    .decode("ascii")
-                )
-
-
-                # =================================
-                # GPT-LIVE INPUT
-                # =================================
-
-                await (
-                    self.connection
-                    .session
-                    .input_audio
-                    .append(
-                        audio=encoded
-                    )
-                )
-
-
-                # --------------------------------
-                # 20ms clock
-                # --------------------------------
-
-                next_tick += 0.020
-
-                delay = (
-                    next_tick
-                    -
-                    event_loop.time()
-                )
-
-                if delay > 0:
-
-                    await asyncio.sleep(
-                        delay
-                    )
-
-                else:
-
-                    next_tick = (
-                        event_loop.time()
-                    )
-
-
             except asyncio.CancelledError:
-
-                return
-
+                break
 
             except Exception as e:
 
                 print(
-                    "❌ LIVE AUDIO SEND:",
+                    "❌ SEND AUDIO ERROR:",
                     type(e).__name__,
-                    e
+                    e,
+                    flush=True
                 )
 
-                await asyncio.sleep(
-                    0.05
-                )
+                await asyncio.sleep(0.1)
 
 
     # ========================================================
-    # OPENAI LIVE
+    # OPENAI REALTIME
     # ========================================================
 
     async def run(self):
 
-        print()
-        print(
-            "🌐 Connecting to gpt-live-1..."
-        )
-
-
         try:
 
-            # =================================
-            # Live API
-            # =================================
+            print(
+                "🌐 Connecting to OpenAI Realtime...",
+                flush=True
+            )
 
             async with (
                 openai_client
-                .live
-                .connect()
+                .realtime
+                .connect(
+                    model=MODEL
+                )
             ) as connection:
 
-                self.connection = (
-                    connection
+                self.connection = connection
+
+                print(
+                    "🌐 WebSocket connected",
+                    flush=True
                 )
 
+                # إعداد الجلسة
+                await connection.session.update(
+                    session={
+                        "type": "realtime",
 
-                # =================================
-                # START SESSION
-                #
-                # مهم جدًا:
-                # مافي "type": "live"
-                # =================================
+                        "model": MODEL,
 
-                await (
-                    connection
-                    .session
-                    .start(
+                        "instructions": SYSTEM_PROMPT,
 
-                        session={
+                        "output_modalities": [
+                            "audio"
+                        ],
 
-                            "model":
-                                MODEL,
+                        "audio": {
 
-                            "instructions":
-                                SYSTEM_PROMPT,
-
-                            "audio": {
+                            "input": {
 
                                 "format": {
-                                    "type":
-                                        "audio/pcm",
-
-                                    "rate":
-                                        24000
+                                    "type": "audio/pcm",
+                                    "rate": 24000
                                 },
 
-                                "output": {
-
-                                    "voice":
-                                        VOICE
+                                "turn_detection": {
+                                    "type": "server_vad"
                                 }
+                            },
+
+                            "output": {
+
+                                "format": {
+                                    "type": "audio/pcm",
+                                    "rate": 24000
+                                },
+
+                                "voice": VOICE
                             }
-                        },
-
-                        event_id=
-                            "k10_start"
-                    )
+                        }
+                    }
                 )
 
-
-                # =================================
-                # AUDIO SENDER
-                # =================================
-
-                self.sender_task = (
-                    asyncio.create_task(
-                        self.send_audio()
-                    )
+                print(
+                    "📡 Session update sent",
+                    flush=True
                 )
 
-
-                # =================================
-                # LIVE EVENTS
-                # =================================
+                self.sender_task = asyncio.create_task(
+                    self.send_audio()
+                )
 
                 async for event in connection:
 
-                    t = event.type
+                    event_type = event.type
 
-
-                    # --------------------------------
-                    # SESSION STARTED
-                    # --------------------------------
-
-                    if (
-                        t
-                        ==
-                        "session.started"
+                    # نطبع الأحداث المهمة
+                    if event_type not in (
+                        "response.output_audio.delta",
                     ):
+                        print(
+                            "📡 REALTIME EVENT:",
+                            event_type,
+                            flush=True
+                        )
+
+                    # ------------------------------
+                    # SESSION CREATED
+                    # ------------------------------
+
+                    if event_type == "session.created":
+
+                        print(
+                            "✅ Realtime session created",
+                            flush=True
+                        )
+
+                    # ------------------------------
+                    # SESSION UPDATED = READY
+                    # ------------------------------
+
+                    elif event_type == "session.updated":
 
                         self.started.set()
-
                         self.ready.set()
 
                         print(
-                            "✅ GPT-LIVE READY"
+                            "✅ K10 REALTIME READY",
+                            flush=True
                         )
 
-                        print(
-                            f"👩 Voice: {VOICE}"
-                        )
-
-                        try:
-
-                            print(
-                                "🆔 Session:",
-                                event.session.id
-                            )
-
-                        except Exception:
-                            pass
-
-
-                    # --------------------------------
-                    # OUTPUT AUDIO
-                    # --------------------------------
+                    # ------------------------------
+                    # AUDIO FROM K10
+                    # ------------------------------
 
                     elif (
-                        t
+                        event_type
                         ==
-                        "session.output_audio.delta"
+                        "response.output_audio.delta"
                     ):
 
                         try:
 
-                            raw = (
-                                base64.b64decode(
-                                    event.delta
+                            raw_audio = base64.b64decode(
+                                event.delta
+                            )
+
+                            discord_audio = (
+                                live_to_discord(
+                                    raw_audio
                                 )
                             )
 
-                            self.output.feed(
-                                raw
+                            self.output.put(
+                                discord_audio
                             )
 
                         except Exception as e:
 
                             print(
-                                "❌ AUDIO OUTPUT:",
-                                e
+                                "❌ OUTPUT AUDIO ERROR:",
+                                type(e).__name__,
+                                e,
+                                flush=True
                             )
 
-
-                    # --------------------------------
-                    # USER TRANSCRIPT
-                    # --------------------------------
-
-                    elif (
-                        t
-                        ==
-                        "session.input_transcript.delta"
-                    ):
-
-                        text = getattr(
-                            event,
-                            "delta",
-                            ""
-                        )
-
-                        self.user_text += (
-                            text
-                        )
-
-
-                        if (
-                            len(self.user_text)
-                            >=
-                            150
-                        ):
-
-                            print(
-                                "🗣️ USER:",
-                                self.user_text
-                            )
-
-                            self.user_text = ""
-
-
-                    # --------------------------------
+                    # ------------------------------
                     # K10 TRANSCRIPT
-                    # --------------------------------
+                    # ------------------------------
 
                     elif (
-                        t
+                        event_type
                         ==
-                        "session.output_transcript.delta"
+                        "response.output_audio_transcript.delta"
                     ):
-
-                        text = getattr(
-                            event,
-                            "delta",
-                            ""
-                        )
-
-                        self.k10_text += (
-                            text
-                        )
-
-
-                        if (
-                            len(self.k10_text)
-                            >=
-                            100
-                        ):
-
-                            print(
-                                "👩 K10:",
-                                self.k10_text
-                            )
-
-                            self.k10_text = ""
-
-
-                    # --------------------------------
-                    # INFO
-                    # --------------------------------
-
-                    elif t == "info":
-
-                        pass
-
-
-                    # --------------------------------
-                    # USAGE
-                    # --------------------------------
-
-                    elif (
-                        t
-                        ==
-                        "session.usage.updated"
-                    ):
-
-                        pass
-
-
-                    # --------------------------------
-                    # CLOSED
-                    # --------------------------------
-
-                    elif (
-                        t
-                        ==
-                        "session.closed"
-                    ):
-
-                        print(
-                            "🛑 GPT-LIVE CLOSED"
-                        )
-
-                        break
-
-
-                    # --------------------------------
-                    # ERROR
-                    # --------------------------------
-
-                    elif t == "error":
 
                         try:
 
                             print(
-                                "❌ OPENAI:",
-                                event.model_dump_json()
+                                event.delta,
+                                end="",
+                                flush=True
+                            )
+
+                        except Exception:
+                            pass
+
+                    # ------------------------------
+                    # USER STARTED TALKING
+                    # ------------------------------
+
+                    elif (
+                        event_type
+                        ==
+                        "input_audio_buffer.speech_started"
+                    ):
+
+                        print(
+                            "🎤 User started talking",
+                            flush=True
+                        )
+
+                    # ------------------------------
+                    # USER STOPPED TALKING
+                    # ------------------------------
+
+                    elif (
+                        event_type
+                        ==
+                        "input_audio_buffer.speech_stopped"
+                    ):
+
+                        print(
+                            "🛑 User stopped talking",
+                            flush=True
+                        )
+
+                    # ------------------------------
+                    # RESPONSE DONE
+                    # ------------------------------
+
+                    elif event_type == "response.done":
+
+                        print(
+                            "\n✅ Response done",
+                            flush=True
+                        )
+
+                    # ------------------------------
+                    # OPENAI ERROR
+                    # ------------------------------
+
+                    elif event_type == "error":
+
+                        try:
+
+                            error_message = (
+                                event.error.message
                             )
 
                         except Exception:
 
-                            print(
-                                "❌ OPENAI:",
+                            error_message = str(
                                 event
                             )
+
+                        self.start_error = (
+                            "OpenAI Realtime: "
+                            + error_message
+                        )
+
+                        print(
+                            "❌ OPENAI REALTIME ERROR:",
+                            error_message,
+                            flush=True
+                        )
+
+                        # إذا الخطأ صار قبل الجلسة
+                        if not self.started.is_set():
+
+                            self.ready.set()
+
+                            break
 
 
         except asyncio.CancelledError:
@@ -1160,10 +762,14 @@ class K10Session:
 
         except Exception as e:
 
+            self.start_error = (
+                f"{type(e).__name__}: {e}"
+            )
+
             print(
                 "❌ LIVE ERROR:",
-                type(e).__name__,
-                e
+                self.start_error,
+                flush=True
             )
 
             self.ready.set()
@@ -1171,14 +777,21 @@ class K10Session:
 
         finally:
 
+            if (
+                not self.ready.is_set()
+            ):
+                self.ready.set()
+
             if self.sender_task:
 
                 self.sender_task.cancel()
 
-                await asyncio.gather(
-                    self.sender_task,
-                    return_exceptions=True
-                )
+            self.connection = None
+
+            print(
+                "🔌 Realtime session ended",
+                flush=True
+            )
 
 
     # ========================================================
@@ -1187,64 +800,65 @@ class K10Session:
 
     async def close(self):
 
+        if self.closed:
+            return
+
         self.closed = True
 
+        print(
+            "🧹 Closing K10 session...",
+            flush=True
+        )
 
         if self.sender_task:
 
             self.sender_task.cancel()
 
-
-        if self.vc:
-
-            try:
-
-                if hasattr(
-                    self.vc,
-                    "stop_listening"
-                ):
-
-                    self.vc.stop_listening()
-
-            except Exception:
-                pass
-
-
-            try:
-
-                self.vc.stop()
-
-            except Exception:
-                pass
-
-
-        self.output.cleanup()
-
-
         if self.main_task:
 
             self.main_task.cancel()
 
-            try:
+        try:
 
-                await self.main_task
+            if (
+                self.vc
+                and
+                self.vc.is_connected()
+            ):
 
-            except BaseException:
-                pass
+                try:
+                    self.vc.stop()
+                except Exception:
+                    pass
+
+                try:
+                    self.vc.stop_listening()
+                except Exception:
+                    pass
+
+                await self.vc.disconnect(
+                    force=True
+                )
+
+        except Exception as e:
+
+            print(
+                "❌ CLOSE ERROR:",
+                type(e).__name__,
+                e,
+                flush=True
+            )
 
 
 # ============================================================
-# DISCORD VOICE RECEIVE
+# VOICE RECEIVE SINK
 # ============================================================
 
 class K10Sink(
     voice_recv.AudioSink
 ):
 
-    def __init__(
-        self,
-        session
-    ):
+    def __init__(self, session):
 
         super().__init__()
 
@@ -1252,7 +866,6 @@ class K10Sink(
 
 
     def wants_opus(self):
-
         return False
 
 
@@ -1265,8 +878,6 @@ class K10Sink(
         if user is None:
             return
 
-
-        # أي بوت طنشه
         if getattr(
             user,
             "bot",
@@ -1274,25 +885,29 @@ class K10Sink(
         ):
             return
 
+        try:
 
-        pcm = getattr(
-            data,
-            "pcm",
-            None
-        )
+            pcm = data.pcm
 
-        if not pcm:
-            return
+            if not pcm:
+                return
 
+            self.session.push_discord_audio(
+                user.id,
+                pcm
+            )
 
-        self.session.receive_audio(
-            user,
-            pcm
-        )
+        except Exception as e:
+
+            print(
+                "❌ SINK ERROR:",
+                type(e).__name__,
+                e,
+                flush=True
+            )
 
 
     def cleanup(self):
-
         pass
 
 
@@ -1303,41 +918,52 @@ class K10Sink(
 @bot.event
 async def on_ready():
 
-    print()
-    print("=" * 60)
-
     print(
-        f"🔥 K10 AI ONLINE: {bot.user}"
+        "================================",
+        flush=True
     )
 
     print(
-        f"🧠 MODEL: {MODEL}"
+        f"🟢 K10 Voice ONLINE: {bot.user}",
+        flush=True
     )
 
     print(
-        f"👩 VOICE: {VOICE}"
+        f"🤖 MODEL: {MODEL}",
+        flush=True
     )
 
     print(
-        "🇧🇭🇶🇦 Bahraini + Qatari"
+        f"🎙️ VOICE: {VOICE}",
+        flush=True
     )
 
-    print("=" * 60)
-    print()
+    print(
+        "================================",
+        flush=True
+    )
 
 
 # ============================================================
-# !!JOIN
+# JOIN
 # ============================================================
 
 @bot.command(
     name="join"
 )
-async def join(
-    ctx
-):
+async def join(ctx):
 
-    if not ctx.author.voice:
+    guild = ctx.guild
+
+    if guild is None:
+        return
+
+    # لازم المستخدم يكون داخل روم
+    if (
+        ctx.author.voice is None
+        or
+        ctx.author.voice.channel is None
+    ):
 
         await ctx.send(
             "❌ ادخل روم صوتي أول."
@@ -1345,249 +971,232 @@ async def join(
 
         return
 
-
-    guild_id = (
-        ctx.guild.id
-    )
-
     channel = (
-        ctx.author.voice.channel
+        ctx.author
+        .voice
+        .channel
     )
-
-
-    # ----------------------------------------
-    # OLD SESSION
-    # ----------------------------------------
-
-    old = SESSIONS.pop(
-        guild_id,
-        None
-    )
-
-    if old:
-
-        try:
-
-            await old.close()
-
-        except Exception:
-            pass
-
-
-    # ----------------------------------------
-    # OLD VOICE CONNECTION
-    # ----------------------------------------
-
-    if ctx.voice_client:
-
-        try:
-
-            if hasattr(
-                ctx.voice_client,
-                "stop_listening"
-            ):
-
-                ctx.voice_client.stop_listening()
-
-        except Exception:
-            pass
-
-
-        try:
-
-            ctx.voice_client.stop()
-
-        except Exception:
-            pass
-
-
-        try:
-
-            await (
-                ctx.voice_client
-                .disconnect(
-                    force=True
-                )
-            )
-
-        except Exception:
-            pass
-
 
     await ctx.send(
         "🎙️ **K10 قاعد تدخل...**"
     )
 
+    # ------------------------------
+    # CLOSE OLD SESSION
+    # ------------------------------
+
+    old_session = SESSIONS.get(
+        guild.id
+    )
+
+    if old_session:
+
+        try:
+            await old_session.close()
+        except Exception:
+            pass
+
+        SESSIONS.pop(
+            guild.id,
+            None
+        )
+
+    # ------------------------------
+    # OLD VOICE CLIENT
+    # ------------------------------
+
+    old_vc = guild.voice_client
+
+    if old_vc:
+
+        try:
+
+            await old_vc.disconnect(
+                force=True
+            )
+
+        except Exception:
+            pass
+
+        await asyncio.sleep(1)
+
+    vc = None
+    session = None
 
     try:
 
-        # =====================================
-        # DISCORD VOICE
-        # =====================================
+        print(
+            f"🔊 Connecting Discord voice: {channel}",
+            flush=True
+        )
 
         vc = await channel.connect(
-
-            cls=
-                voice_recv
-                .VoiceRecvClient,
-
+            cls=voice_recv.VoiceRecvClient,
             timeout=30.0,
-
             reconnect=True,
-
-            # مهم:
-            # لازم False عشان تسمع الناس
             self_deaf=False,
-
             self_mute=False
         )
 
+        print(
+            "✅ Discord voice connected",
+            flush=True
+        )
 
-        # =====================================
-        # SESSION
-        # =====================================
+        # ------------------------------
+        # CREATE K10 SESSION
+        # ------------------------------
 
         session = K10Session(
+            guild.id,
             vc
         )
 
-        SESSIONS[
-            guild_id
-        ] = session
+        SESSIONS[guild.id] = session
 
+        session.main_task = (
+            asyncio.create_task(
+                session.run()
+            )
+        )
 
-        # =====================================
-        # OPENAI LIVE
-        # =====================================
+        # ------------------------------
+        # WAIT OPENAI
+        # ------------------------------
 
-        session.main_task = asyncio.create_task(
-        session.run()
-    )
+        try:
 
-        await asyncio.wait_for(
-        session.ready.wait(),
-        timeout=25
-    )
-        if not (
-            session.started
-            .is_set()
-        ):
-
-            raise RuntimeError(
-                "GPT-Live ما بدأ الجلسة"
+            await asyncio.wait_for(
+                session.ready.wait(),
+                timeout=25
             )
 
+        except asyncio.TimeoutError:
 
-        # =====================================
-        # START K10 OUTPUT
-        # =====================================
+            raise RuntimeError(
+                "OpenAI Realtime أخذ أكثر من 25 ثانية"
+            )
+
+        # ------------------------------
+        # SHOW REAL ERROR
+        # ------------------------------
+
+        if not session.started.is_set():
+
+            raise RuntimeError(
+                session.start_error
+                or
+                "OpenAI Realtime ما بدأ الجلسة"
+            )
+
+        # ------------------------------
+        # START DISCORD PLAYBACK
+        # ------------------------------
 
         vc.play(
             session.output
         )
 
-
-        # =====================================
-        # LISTEN TO EVERY HUMAN
-        # =====================================
+        # ------------------------------
+        # START LISTENING
+        # ------------------------------
 
         sink = K10Sink(
             session
         )
 
         vc.listen(
-
-            sink,
-
-            after=lambda error: (
-                print(
-                    "❌ LISTEN ERROR:",
-                    error
-                )
-
-                if error
-
-                else print(
-                    "🛑 Listening stopped"
-                )
-            )
+            sink
         )
 
-
         await ctx.send(
-            "🔥 **K10 AI Ready**\n"
-            f"🎧 تسمع كل الموجودين في **{channel.name}**\n"
-            "🇧🇭 بحرينية + 🇶🇦 قطرية\n"
-            f"👩 Voice: **{VOICE}**\n"
-            "🗣️ تكلموا طبيعي."
+            "🟢 **K10 دخلت الروم وجاهزة 🎙️**"
+        )
+
+        print(
+            "🎧 K10 listening...",
+            flush=True
         )
 
 
     except Exception as e:
 
-        print(
-            "❌ JOIN ERROR:",
-            type(e).__name__,
-            e
+        error_text = (
+            f"{type(e).__name__}: {e}"
         )
 
-        await ctx.send(
-            "❌ JOIN ERROR\n"
-            f"```{type(e).__name__}: {e}```"
+        print(
+            "❌ JOIN ERROR:",
+            error_text,
+            flush=True
+        )
+
+        try:
+
+            await ctx.send(
+                "❌ **JOIN ERROR**\n"
+                f"```{error_text[:1500]}```"
+            )
+
+        except Exception:
+            pass
+
+        if session:
+
+            try:
+                await session.close()
+            except Exception:
+                pass
+
+        elif vc:
+
+            try:
+
+                await vc.disconnect(
+                    force=True
+                )
+
+            except Exception:
+                pass
+
+        SESSIONS.pop(
+            guild.id,
+            None
         )
 
 
 # ============================================================
-# !!LEAVE
+# LEAVE
 # ============================================================
 
 @bot.command(
     name="leave"
 )
-async def leave(
-    ctx
-):
+async def leave(ctx):
+
+    guild = ctx.guild
+
+    if guild is None:
+        return
 
     session = SESSIONS.pop(
-        ctx.guild.id,
+        guild.id,
         None
     )
 
-
     if session:
 
-        try:
+        await session.close()
 
-            await session.close()
+        await ctx.send(
+            "👋 **K10 طلعت من الروم.**"
+        )
 
-        except Exception:
-            pass
+        return
 
-
-    vc = ctx.voice_client
-
+    vc = guild.voice_client
 
     if vc:
-
-        try:
-
-            if hasattr(
-                vc,
-                "stop_listening"
-            ):
-
-                vc.stop_listening()
-
-        except Exception:
-            pass
-
-
-        try:
-            vc.stop()
-
-        except Exception:
-            pass
-
 
         try:
 
@@ -1598,49 +1207,80 @@ async def leave(
         except Exception:
             pass
 
+        await ctx.send(
+            "👋 **طلعت من الروم.**"
+        )
 
-    await ctx.send(
-        "👋 K10 طلعت من الروم."
-    )
+    else:
+
+        await ctx.send(
+            "❌ **أنا مب داخل روم أصلًا.**"
+        )
 
 
 # ============================================================
-# !!STATUS
+# STATUS
 # ============================================================
 
 @bot.command(
     name="status"
 )
-async def status(
-    ctx
-):
+async def status(ctx):
 
-    session = SESSIONS.get(
-        ctx.guild.id
-    )
+    guild = ctx.guild
 
-
-    if not session:
-
-        await ctx.send(
-            "🔴 K10 مو شغالة."
-        )
-
+    if guild is None:
         return
 
+    vc = guild.voice_client
 
-    speaker = (
-        session.active_user_name
-        or "ماحد"
+    session = SESSIONS.get(
+        guild.id
+    )
+
+    discord_status = (
+        "🟢 متصل"
+        if vc and vc.is_connected()
+        else
+        "🔴 مب متصل"
+    )
+
+    realtime_status = (
+        "🟢 جاهز"
+        if session and session.started.is_set()
+        else
+        "🔴 مب جاهز"
+    )
+
+    await ctx.send(
+        "**K10 STATUS**\n"
+        f"Discord Voice: {discord_status}\n"
+        f"OpenAI Realtime: {realtime_status}\n"
+        f"Model: `{MODEL}`"
     )
 
 
-    await ctx.send(
-        "🔥 **K10 AI Ready**\n"
-        f"🧠 Model: `{MODEL}`\n"
-        f"👩 Voice: `{VOICE}`\n"
-        "🇧🇭🇶🇦 `Bahraini + Qatari`\n"
-        f"🎤 المتكلم: `{speaker}`"
+# ============================================================
+# ERROR HANDLER
+# ============================================================
+
+@bot.event
+async def on_command_error(
+    ctx,
+    error
+):
+
+    if isinstance(
+        error,
+        commands.CommandNotFound
+    ):
+        return
+
+    print(
+        "❌ COMMAND ERROR:",
+        type(error).__name__,
+        error,
+        flush=True
     )
 
 
@@ -1649,7 +1289,8 @@ async def status(
 # ============================================================
 
 print(
-    "🚀 Starting K10 GPT-Live..."
+    "🚀 Starting K10 Voice...",
+    flush=True
 )
 
 bot.run(
