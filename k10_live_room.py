@@ -872,7 +872,7 @@ class K10Sink(
 
 
     def wants_opus(self):
-        return False
+        return True
 
 
     def write(
