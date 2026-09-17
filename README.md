@@ -1,230 +1,377 @@
-![PyPI - Version](https://img.shields.io/pypi/v/discord-ext-voice-recv?color=dodgerblue&link=https%3A%2F%2Fpypi.org%2Fproject%2Fdiscord-ext-voice-recv%2F)
+# ChatGPT Discord Bot
 
-# discord-ext-voice-recv
-Voice receive extension package for discord.py
+[![Offline checks](https://github.com/Zero6992/chatGPT-discord-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/Zero6992/chatGPT-discord-bot/actions/workflows/ci.yml)
+[![Python 3.12–3.14](https://img.shields.io/badge/python-3.12%E2%80%933.14-blue)](pyproject.toml)
+[![License: GPL v2](https://img.shields.io/badge/license-GPL%20v2-blue)](LICENSE)
 
-## Warning
-**This extension should be more or less functional, but the code is not yet feature complete.  No guarantees are given for stability or random breaking changes.**
+Bring your favorite AI models into Discord. Chat with OpenAI, Claude, Gemini,
+Grok, DeepSeek, or models running on your own machine—all through one bot.
 
-See the [update notes](update_notes.md) for a poor excuse for a changelog.
+Host it yourself, choose which models your users can access, and keep conversations
+across restarts. Each user gets separate history in each server, channel and thread,
+with independent private and public conversations.
 
-## Installing
-**Python 3.8 or higher is required**, preferably at least 3.11 or whatever is latest
+[Quick start](#quick-start) · [Supported backends](#supported-backends) ·
+[Commands](#commands) · [CLI subscriptions](#cli-account-and-subscription-login) ·
+[Docker](#docker) · [Migration](docs/migration.md)
 
-```
-python -m pip install discord-ext-voice-recv
-```
+## Features
 
-To install directly from github:
-```
-python -m pip install git+https://github.com/imayhaveborkedit/discord-ext-voice-recv
-```
+- **Multiple providers:** official APIs and administrator-configured custom endpoints.
+- **Local models:** connect Ollama, LM Studio, vLLM or another compatible chat server.
+- **Personal CLI access:** use your own eligible Codex, Claude Code or Grok Build
+  account through an isolated, owner-only backend.
+- **Persistent conversations:** switch models and personas, resume after a restart,
+  and reset or delete your history from Discord.
+- **Images and video:** generate images, edit attachments, create videos, or search
+  for images with explicitly selected API backends.
+- **Controlled usage:** configure access, context size, retention and concurrency.
+  Provider failures never silently select another model or billing mode.
 
-Naturally, this extension depends on `discord.py` being installed with voice support (`pynacl`).
+## Quick start
 
-## Example
-See the [example script](examples/recv.py).
+You need **Python 3.12–3.14**, a Discord bot token, and either an official API key
+or a running local model server. Linux, WSL and macOS support API/local backends;
+Windows users should use WSL. CLI backends have [additional requirements](docs/cli.md).
 
-## Feature overview
-### Custom VoiceProtocol client
-No monkey patching or bizarre hacks required.  Simply use the library feature to use `VoiceRecvClient` as the voice client class.  See [Usage](#usage).
+### 1. Create and invite your Discord bot
 
-### New events
-This extension adds the unimplemented voice websocket events and three virtual events.  See [New Events](#new-events).
+Create an application in the [Discord Developer Portal](https://discord.com/developers/applications)
+and obtain its token from the **Bot** page. Keep the token private.
 
-### Speaking state
-It is now possible to determine if a member is speaking or not, using `VoiceRecvClient.get_speaking()`, or using the speaking events inside an `AudioSink`.
+Under **Installation**, enable Guild Install and configure the `bot` and
+`applications.commands` scopes. Give the bot **View Channels**, **Send Messages**,
+**Embed Links** and **Attach Files** in the channels where you will use it.
+For threads, also allow **Send Messages in Threads**. Use the installation link
+to add it to your server. Discord's [application setup guide](https://docs.discord.com/developers/quick-start/getting-started)
+walks through the portal settings.
 
-### Simple and familiar API
-The overall API is designed to mirror the discord.py voice send API, with `AudioSink` being the counterpart to the existing `AudioSource`.  See [Sinks](#sinks).
+Slash commands work without Message Content Intent. Enable it only for
+[automatic channel replies](#automatic-channel-replies).
 
-### Convenient included utilities
-Batteries included in the form of useful built in `AudioSinks`.  Some to match their `AudioSource` counterpart, some I merely considered useful.  See... uh... TODO.
+### 2. Install the project
 
-### Optional extras
-Slightly more complex included batteries that depend on external packages.  These live in `voice_recv.extras`.  They can be installed by adding their optional dependency during install, ex: `pip install discord-ext-voice-recv[extras_thing]`, or all of them can be installed by specifying `extras` instead.  See [Extras](#extras).
-
-### More or less typed
-It's probably fine.
-
-## Usage
-### VoiceRecvClient
-The class `voice_recv.VoiceRecvClient` must be used in `VoiceChannel.connect()` to enable voice receive functionality.
-```python
-from discord.ext import voice_recv
-
-voice_client = await voice_channel.connect(cls=voice_recv.VoiceRecvClient)
-```
-
-### New voice client functions
-```python
-def listen(sink: voice_recv.AudioSink, *, after=None) -> None
-```
-Receives audio data into an `AudioSink`.  A sink is similar to the `AudioSource` class, where most of the logic is done in a single callback function, but in reverse.  Sinks are explained in detail in the [Sinks](#sinks) section below.
-
-The finalizer, `after` is called after the sink has been exhausted or an error occurred.  The callback signature is the same as the after callback for `play()`, one parameter for an optional Exception object.
-
-```python
-def is_listening() -> bool
-```
-Returns `True` if the voice client is currently receiving audio.  Specifically, if the bot is reading from the voice socket.
-
-```python
-def stop() -> None
-```
-This function now stops both receiving and sending of audio.
-
-```python
-def stop_listening() -> None
-```
-Stops receiving audio.
-
-```python
-def stop_playing() -> None
-```
-Stops playing audio.  This function is identical to `discord.VoiceClient.stop()`.
-
-```python
-def get_speaking(member: discord.Member | discord.User) -> bool | None
-```
-Gets the speaking state (voice activity, the green circle) of a member.  User is typed in for convenience.  Returns None if the member was not found.
-
-## Sinks
-The API of this extension is designed to mirror the discord.py voice send API.  Sending audio uses the `AudioSource` class, while receiving audio uses the `AudioSink` class.  A sink is designed to be the inverse of a source.  Essentially, a source is a callback called by discord.py to produce a chunk of audio data.  Conversely, a sink is a callback called by the library to handle a chunk of audio.  Sinks can be composed in the same fashion as sources, creating an audio processing pipeline.  Sources and sinks can even combined into one object to handle both tasks, such as creating a feedback loop.
-
-Special care should be taken not to write excessively computationally expensive code, as python is not particularly well suited to real-time audio processing.
-
-Due to voice receive being somewhat more complex than voice sending, sinks have additional functionality compared to sources.  However, the core sink functions should look relatively familiar.
-
-```python
-class MySink(voice_recv.AudioSink):
-    def __init__(self):
-        super().__init__()
-
-    def wants_opus(self) -> bool:
-        return False
-
-    def write(self, user: User | Member | None, data: VoiceData):
-        ...
-
-    def cleanup(self):
-        ...
+```bash
+git clone https://github.com/Zero6992/chatGPT-discord-bot.git
+cd chatGPT-discord-bot
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
+cp config.example.toml config.toml
 ```
 
-These are the main functions of a sink, names and purpose reflecting that of their source counterparts.  It is important to note that `super().__init__()` must be called when inheriting from `AudioSink`, in contrast to `AudioSource` which does not have a default `__init__` function.
+Upgrading an existing installation? Follow the [migration guide](docs/migration.md)
+before replacing configuration or dependencies.
 
-- The `wants_opus()` function determines if the sink should receive opus packets or decoded PCM packets.  Care should be taken not to unintentionally mix sinks that want different types.
-- The `write()` function is the main callback, where the sink logic takes place.  In a sink pipeline, this could alter, inspect, or log a packet, and then write it to a child sink.  `VoiceData` is a simple container class with attributes for the origin member, opus data, optionally pcm data, and raw audio packet.
-- The `cleanup()` function is identical to `AudioSource.cleanup()`, a finalizer to cleanup any loose ends when the sink has finished its job.
+### 3. Choose a backend
 
-Additionally, sinks also have properties for their `client` and `voice_client`, as well as `parent` and `child`/`children` sinks.
+Credentials go in `.env`; model aliases and access settings go in `config.toml`.
+The example includes the backends listed below and defaults to a local server.
 
-### Built in Sinks
-This extension comes with several useful built in sinks, as well as a few [extras](#extras) mentioned later.  For a more information, you will have to [source dive](discord/ext/voice_recv/sinks.py) for now.
+**To start with OpenAI**, set these values in `.env`:
 
-- `AudioSink` - The base class for most sinks, similar in purpose to the discord.py `AudioSource`.
-  - `MultiAudioSink` - A sink that supports writing to multiple destination sinks.  Has no subclass implementations currently.  Generally intended to be extended by the user.
-  - `BasicSink` - A simple sink that operates based on a user provided callback.  Useful for testing or simple tasks not performed by other sinks.
-  - `WaveSink` - Writes audio data to a .wav file.  It does not fill in silence or mix audio from multiple users on its own.  `WavSink` is an alias for this sink.
-  - `FFmpegSink` - Uses ffmpeg to convert the audio stream to an arbitrary format, or whatever else ffmpeg can do to it.  Requires ffmpeg, but you should already have it working for discord.py.
-  - `PCMVolumeTransformer` - The AudioSink analog to the discord.py AudioSource version.  Does exactly the same thing: controls the volume.
-  - `ConditionalFilter` - Filters audio data based on a given predicate.  If the predicate fails for a packet, it is not written to the destination sink.
-    - `UserFilter` - A conditional filter to check if data is from a given user.
-    - `TimedFilter` - A conditional filter with a timer for how long it should operate.
-  - `SilenceGeneratorSink` - Generates silence to fill in audio transmission downtime for a continuous data stream.  **Note: This sink is pretty broken and buggy right now and slated for rewrite.  Usage is not advised.**
-
-### Sink event listeners
-With AudioSinks being potentially more complex and stateful than AudioSources and the addition of new events, it is sometimes necessary to handle events in the context of a sink.  It would be rather awkward to have to register a sink function with `commands.Bot.add_listener()` while dealing with thread safety, and even more so using `discord.Client`.  To remedy this, listeners can be defined within sinks, similarly to how they work in Cogs.
-
-```python
-class MySink(AudioSink):
-    @AudioSink.listener()
-    def on_voice_member_disconnect(self, member: discord.Member, ssrc: int | None):
-        print(f"{member} has disconnected")
-        self.do_something_like_handle_disconnect(ssrc)
+```dotenv
+DISCORD_BOT_TOKEN=your_discord_bot_token
+OPENAI_API_KEY=your_openai_api_key
 ```
 
-Note that these functions must be sync functions, as they are dispatched from a thread.  Trying to use an async function will result in an error.  This restriction only applies to sink listeners, and normal async event listeners will function as per usual.  The event listener dispatch thread is different from the one used to dispatch the `write()` callback so potential thread safety issues should be considered.  A decorator argument to run the event callback in the other thread *may* be added later.
+Edit the existing `[bot]` section of `config.toml`:
 
-## New events
-```python
-async def on_voice_member_speaking_state(member: discord.Member, ssrc: int, state: SpeakingState | int)
-```
-First and foremost, this event does **NOT** refer to the speaking indicator in discord (the green circle).  For voice activity, see `on_voice_member_speaking_start`.
-This event is fired when the speaking state (speaking mode) of a member changes.  This happens when:
-- A member first speaks (transmits audio) in a voice, but only once per session
-- A member activates or deactivates priority speaker mode
-
-This event is fired once initially to reveal the ssrc of a member, an identifier to map packets to their originating member.  Any packets received from this member before this event fires can (probably) be safely ignored since they are likely just silence packets.
-
-```python
-async def on_voice_member_connect(member: discord.Member)
+```toml
+[bot]
+default_model = "openai"
+allowed_user_ids = [123456789] # Replace with your Discord user ID.
 ```
 
-Called when a member connects to a voice channel. Also called on initial connection for every member in the channel.
+Keep the other example settings and backend/model sections. The `openai` alias
+uses `gpt-5.6-terra`; model IDs are configurable. Enable Discord's Developer Mode
+to copy your user ID. An empty `allowed_user_ids` list permits anyone who can
+access the bot, so configure access before sharing API usage.
 
-```python
-async def on_voice_member_disconnect(member: discord.Member, ssrc: int | None)
+**To start with a local model**, keep `default_model = "local"`, set the model ID
+under `[models.local]` to one installed on your server, and choose its base URL:
+
+| Server | Example base URL |
+| --- | --- |
+| Ollama | `http://127.0.0.1:11434/v1` |
+| LM Studio | `http://127.0.0.1:1234/v1` |
+| vLLM | `http://127.0.0.1:8000/v1` |
+
+The local example uses `auth = "none"` and needs only the Discord token. For an
+authenticated or remote server, see [local/custom configuration](docs/providers.md#local-and-custom-servers).
+Remote endpoints require HTTPS; endpoints are controlled by the administrator.
+
+### 4. Start chatting
+
+```bash
+python main.py
 ```
-Called when a member disconnects from a voice channel. The `ssrc` parameter is the unique id a member has to identify which packets belong to them.  This is useful when using custom sinks, particularly those that handle packets from multiple members.
 
-```python
-async def on_voice_member_video(member: discord.Member, data: voice_recv.VoiceVideoStreams)
+The bot connects to Discord and synchronizes its slash commands. Try:
+
+```text
+/chat message:Hello! Help me plan a small Python project.
+/models
+/provider model:claude
+/chat message:Review the plan we just discussed.
+/reset
 ```
-Called when a member in voice channel toggles their webcam on or off, NOT screenshare.  Screenshare status is only indicated in the `self_video` attribute of `discord.VoiceState`.
 
-```python
-async def on_voice_member_flags(member: discord.Member, flags: voice_recv.VoiceFlags)
+Select only backends whose credentials or local service you have configured.
+Replies start private. Use `/public` to make future slash replies visible in the
+channel, or `/private` to return to your separate private conversation.
+
+## Supported backends
+
+| Backend | Bot capabilities | Credential |
+| --- | --- | --- |
+| OpenAI | Text chat; image generation and editing | `OPENAI_API_KEY` |
+| Anthropic | Claude text chat | `ANTHROPIC_API_KEY` |
+| Google Gemini | Text chat; Veo text-to-video and image-to-video | `GEMINI_API_KEY` |
+| xAI Grok | Text chat; image search; text-to-video | `XAI_API_KEY` |
+| DeepSeek | Text chat | `DEEPSEEK_API_KEY` |
+| Local/custom servers | Compatible text Chat Completions | Optional administrator-configured key |
+| Codex, Claude Code, Grok Build CLI | Isolated text conversations and explicit session resumption | API key or native account login; owner-only |
+
+Configure model IDs, aliases and supported parameters in TOML. New model aliases
+do not require Python changes. Each alias declares its capabilities; chat, search
+and media use separate aliases. Unsupported settings fail explicitly.
+Configuration changes require restarting the bot.
+
+Text chat accepts text only. Vision, audio, streaming and general agent tools are
+not exposed. Long replies arrive as a text attachment to preserve formatting.
+
+Adapters have offline contract coverage, with live checks for OpenAI/Anthropic/xAI
+chat, native CLI account text and xAI video. Other paths have outstanding live
+verification or provider errors. See the [capability reference](docs/providers.md)
+and the CLI and media limitations below before enabling a backend.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `/chat message` | Send a message in your current conversation |
+| `/models` | List configured models, capabilities and authentication modes |
+| `/provider [model]` | Show the current backend/model ID, or select a configured chat alias |
+| `/private`, `/public` | Choose the audience and its separate history |
+| `/switchpersona persona` | Change the conversation's personality |
+| `/reset` | Clear the current history, native session state and media job mappings |
+| `/delete` | Clear both your private and public histories in this channel |
+| `/image_search query model` | Find images and show up to three source-linked previews |
+| `/draw prompt model [image]` | Generate an image or edit an attached PNG/JPEG |
+| `/video prompt model [image]` | Generate a video; image input requires a Veo alias |
+| `/job job_id` | Retrieve an existing video job without another generation request |
+| `/cancel` | Cancel outstanding requests in your current conversation |
+| `/cli_auth action model` | Owner-only CLI login, status, logout or cancellation; always private |
+| `/replyall enabled` | Administrator control for automatic channel replies |
+| `/help` | Show the command reference |
+
+`/models` and `/help` use embeds. The model catalog highlights your current chat
+alias and provides page buttons for larger configurations. Model menus show the
+alias, API or CLI backend, and model ID. Click the `model` field to choose an
+option; typing filters the suggestions. Media menus show only matching
+capabilities, including image editing or animation when an input image is attached.
+
+Personas include `standard`, `creative`, `technical` and `casual`. Restricted
+personas require an ID listed in `bot.admin_user_ids`.
+
+### Automatic channel replies
+
+Add channel IDs to `bot.reply_channels`, set `bot.admin_user_ids`, enable
+[Message Content Intent](https://docs.discord.com/developers/events/gateway#message-content-intent)
+in the Developer Portal, and restart. The bot replies to ordinary user messages in
+those channels. An administrator can use `/replyall enabled:false` to pause it.
+
+Automatic replies are public and use the author's public history. Other bots and
+webhooks are ignored. Leave `reply_channels = []` for slash commands only.
+
+## Conversation history
+
+History is stored in SQLite at `data/conversations.sqlite3` by default. Conversations
+are scoped to the bot account, server or DM, channel or thread, requesting user,
+and private/public audience. Other users do not contribute to your model context;
+public replies are still visible to people in that channel.
+
+Defaults retain **100 completed turns** and expire conversations after **30 days
+of inactivity**. Adjust `max_turns`, `retention_days` and `context_bytes` in `[bot]`.
+The context budget counts UTF-8 bytes conservatively, not exact tokens. Requests
+in one conversation run in order, with bounded concurrency between conversations.
+
+Switching model, provider or persona preserves retained text and reconstructs
+context when native session reuse is inappropriate. Failed or cancelled generation
+does not add a turn. `/reset` restores the default model and persona, while keeping
+CLI login. Use `/cli_auth action:logout model:ALIAS` to sign out.
+
+Use `/provider` without arguments to check the configured alias, backend, model ID
+and authentication mode without making a model request. Each chat includes the
+current model configuration in its system context, so retained self-introductions
+from previous models should not carry over as the new model's identity. A model's
+own description is not a reliable routing check; local/custom model IDs are the
+administrator's configuration, not verified model provenance.
+
+Keep the database on persistent disk and run one bot process per database. Stop
+the bot before copying it, or use SQLite's backup API. Protect backups as private
+conversation data. Deleting bot history does not delete messages already sent to
+Discord or data retained by a provider. See [storage and migration](docs/migration.md).
+
+## CLI account and subscription login
+
+Use your own eligible Codex, Claude Code or Grok Build account for a **personal bot**.
+Account mode requires `allowed_user_ids` to contain only the account owner; shared
+subscription access is disabled. Use official API backends for shared services.
+
+Start with [config.account.example.toml](config.account.example.toml) and follow the
+[CLI setup guide](docs/cli.md) to provision pinned images and restricted egress.
+Choose a dedicated rootless Docker daemon, or explicit Docker Desktop mode for a
+personal bot. Both require resource controls and seccomp; Desktop mode uses a
+reviewed, hash-pinned profile and probes the effective container controls.
+The bot refuses CLI execution when required isolation is unavailable.
+
+Once the runtime is ready, the owner can initiate Codex or Grok device login:
+
+```text
+/cli_auth action:login model:codex_account
+/cli_auth action:login model:grok_account
+/cli_auth action:status model:codex_account
 ```
-An undocumented event dispatched when a member joins a voice channel containing a flags bitfield. Also called on initial connection for every member in the channel.
 
-Flags:
-- `VoiceFlags.clips_enabled`: User has [clips](https://support.discord.com/hc/en-us/articles/16861982215703-Clips) enabled
-- `VoiceFlags.allow_voice_recording`: User has consented to their voice being clipped
-- `VoiceFlags.allow_any_viewer_clips`: User has consented to stream viewers clipping them
+The private response contains the native CLI's official authorization URL and
+device code. Complete login on the provider website. Claude login uses a private
+local terminal:
 
-```python
-async def on_voice_member_platform(member: discord.Member, platform: voice_recv.VoicePlatform | None)
+```bash
+python -m src.cli_accounts login claude_account --config config.toml
 ```
-An undocumented event dispatched when a member joins a voice channel containing the member's platform. Also called on initial connection for every member in the channel.
 
-Values:
-- `VoicePlatform.desktop`
-- `VoicePlatform.mobile`
-- `VoicePlatform.xbox`
-- `VoicePlatform.playstation`
+All three CLIs support local `login`, `status` and `logout` administration.
+Credentials stay in dedicated runtime storage; no OAuth token belongs in `.env`
+or a Discord message. Re-login preserves bot history and invalidates old sessions.
 
-```python
-def on_rtcp_packet(packet: RTCPPacket, guild: discord.Guild)
+API and CLI aliases can coexist in one configuration. Copy the needed backend and
+model sections from the account example into your API configuration, retaining the
+personal-bot ownership restriction. The `/provider` menu lists **Claude Code**,
+**Codex CLI** and **Grok CLI** alongside API models. Select `claude_account`,
+`codex_account` or `grok_account` to use the configured native CLI authentication;
+switching retains your text history.
+
+`auth = "account"` uses applicable plan allowances and any enabled extra usage.
+`auth = "api"` is billed separately to the API key owner. Subscriptions do not imply
+unlimited automation or media access. CLI image/video generation and image search
+are not implemented. See [provider-specific restrictions](docs/cli.md#authentication-and-deployment).
+Native account chat and session resumption have live verification with the bot's
+container runner. Check command delivery in your own Discord deployment.
+
+## Images, video and image search
+
+The main example includes optional media aliases. Configure the corresponding
+API key, then select an alias explicitly:
+
+```text
+/draw prompt:A watercolor fox reading a book model:image
+/video prompt:An orange ball rolling on a white table model:xai_video
+/image_search query:Taipei 101 at sunset model:image_search
 ```
-A virtual event for when an RTCP packet is received.  This event only works inside of sinks, so it cannot be async.
 
-```python
-def on_voice_member_speaking_start(member: discord.Member)
-def on_voice_member_speaking_stop(member: discord.Member)
+Attach a PNG/JPEG to `/draw` to edit it. The OpenAI image example requests low
+quality at 1024×1024. The xAI video example requests one second at 480p; the `video`
+alias uses Gemini Veo and also accepts image input. API charges apply separately
+from CLI subscriptions.
+
+Video jobs show an ID while processing. `/job` resumes retrieval after a restart,
+without another generation POST. `/cancel` stops local waiting; submitted remote
+jobs may continue and be billed. Submission timeouts are not automatically retried.
+
+Generated files are attached to Discord, subject to the configured **8 MiB** default
+and the server's upload limit. Administrators may raise the bot cap up to 25 MiB.
+Artifacts are not archived locally; interrupted image delivery cannot be recovered
+with `/job`. Search previews use Discord's image proxy, and source sites may block them.
+
+Media adapters have offline contract tests. Live artifact generation and delivery
+have been verified for xAI video; image generation/search and Veo have outstanding
+provider checks. Confirm model access, account limits and artifact delivery with
+your selected provider before enabling paid operations for other users.
+
+## Docker
+
+After configuring `.env` and `config.toml`, create persistent storage and allow
+container UID 1001 to write to it. For a **new** data directory on Linux:
+
+```bash
+sudo install -d -m 700 -o 1001 -g 1001 data
+docker compose up -d --build
+docker compose logs -f bot
 ```
-Virtual events for the state of the speaking indicator (the green circle).  These events are synthesized from packet activity and may not exactly match what is displayed in the discord client.  Due to performance issues with asyncio, this event is sink only and cannot be async.
 
-## Extras
+For existing data, back it up and review ownership before changing permissions.
+The application runs as a non-root user with a read-only application filesystem.
+Compose supports API and local/custom HTTP backends; it has no Docker socket and
+cannot run nested CLI backends.
 
-### `voice_recv.extras.speechrecognition`
-- Optional dependency: `extras_speech`
-- Requires package: `SpeechRecognition`
-- Provides: `SpeechRecognitionSink`
+Container `127.0.0.1` refers to that container. To use a model server on another
+host, configure a reachable administrator-controlled HTTPS endpoint. Run the bot
+directly on the host when using the documented CLI runtime.
 
-A helper sink for using `SpeechRecognition` to perform speech-to-text conversion.  Generally depends on third party services for reasonable quality.  Results may vary.
+## Upgrading
 
-### `voice_recv.extras.localplayback`
-- Optional dependency: `extras_local`
-- Requires package: `pyaudio`
-- Provides: `LocalPlaybackSink`, `SimpleLocalPlaybackSink`
+Version 4 changes configuration and conversation storage. Unofficial free-provider
+aggregators, browser-cookie authentication and hidden fallbacks have been removed.
+Use an official API, a local/custom endpoint or a supported personal CLI backend.
+Legitimate official API free tiers remain supported.
 
-Helper sinks for playing audio through an audio output device the local system.  Defaults to the system default device, but other output devices can also be specified.
+Follow the [migration guide](docs/migration.md) for environment-variable mappings,
+persona migration, database handling and rollback. Preserve existing configuration
+and user files before upgrading.
 
-## Currently missing or WIP features
-- Silence generation (WIP, pending rewrite)
+## Development and contributing
 
-## Future plans
-- Muxer AudioSink (mixes multiple audio streams into a single stream)
-- Rust implementations of some components for improved performance
-- Alternative voice client implementation with a minimal interface intended for use with external data processing
+Bug reports and pull requests are welcome. Include reproduction steps, runtime
+versions and the affected model alias; remove tokens and private conversation data.
+The [architecture guide](docs/architecture.md) explains the provider, conversation,
+CLI and Discord boundaries.
+
+Install Node.js **22+** for account-runtime tests, then run:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pip install --no-deps -e .
+python -m pytest
+ruff check .
+ruff format --check .
+mypy
+python -m build
+python -m pip check
+pip-audit -r requirements.txt
+```
+
+The default suite is deterministic and offline, using HTTP fixtures, temporary
+SQLite databases and fake CLI executables. CI runs Python 3.12–3.14 with Node.js 24.
+Paid smoke tests require explicit opt-in and credentials. They read process
+environment variables, not `.env` automatically. To deliberately test one chat alias:
+
+```bash
+BOT_LIVE_TESTS=1 BOT_ALLOW_PAID_TESTS=1 LIVE_CHAT_MODEL=openai \
+  python -m pytest -m live -k chat -q
+```
+
+Use `LIVE_IMAGE_MODEL`, `LIVE_VIDEO_MODEL` or `LIVE_CLI_MODEL` and the corresponding
+`-k` filter for other operations. CLI tests require the configured isolated runtime
+and completed login. Missing opt-in, credentials or model selectors are reported
+as skipped. API credits, plan allowances or enabled extra usage may be consumed.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| Slash commands do not appear | Confirm the bot is running, the installation has `applications.commands`, and startup synchronization succeeded |
+| Missing credential or unavailable model | Check the selected alias, its `api_key_env`, the model ID and provider access |
+| Wrong model identity after switching | Run `/provider` in the same channel and private/public conversation to check the configured backend/model; retained replies may describe a previous model |
+| HTTP 429 | Check provider billing, quota and rate limits before trying again |
+| Old configuration rejected | Apply the [migration guide](docs/migration.md); outdated fields are intentionally rejected |
+| Local endpoint unreachable in Docker | Use a reachable HTTPS endpoint; container loopback is not the host |
+| CLI runtime unavailable | Check the pinned version, rootless daemon, resource controls, seccomp and proxy using the [runtime guide](docs/cli.md) |
+| Generated attachment too large | Request a shorter/smaller artifact or adjust the cap within Discord's limit |
+
+## License
+
+[GNU General Public License v2.0](LICENSE).
